@@ -1,0 +1,128 @@
+Dear User,
+
+Using Multicrab for you is convenient? The start using T3Cooker to do the same kind of stuff 
+but on your local T3 farm. There is pretty much cooking behind, therefore the name - T3Cooker.
+
+To run cmssw jobs using T3Cooker you need to know where your dataset, configuration(py) is.
+You will also need, if you already haven't, to include the VarParsing module to 
+your configuration. This is realy simple and helps you in any case to be more flexible
+if you just want to change one variable, bool or something else. It also alows to inject 
+input files in a simple manner w/o using hardwork machinery for producing lists of 
+files and putting them to your configuration PoolSource by hand.
+
+You can also look at the t3cooker_cmssw_job_template.sh which can be changed to suit your needs.
+included. There is also a possibility to run 'root' comand instead of cmsRun. This would be 
+convenient for many users doing bare root analysis (like Christophe's framework). In that case
+t3cooker_exe_job_template.sh is used as a template for all jobs. 
+
+In case of trouble contact me to roko.plestina@cern.ch. I'll be glad to help you if I could.
+
+To see how the T3Cooker configuration can be used to create and run jobs type in your terminal
+###############
+t3cooker --help
+###############
+It should be pretty self explanatory. 
+
+
+
+ ____       _                 _____ _____  ____            _             
+/ ___|  ___| |_ _   _ _ __   |_   _|___ / / ___|___   ___ | | _____ _ __ 
+\___ \ / _ \ __| | | | '_ \    | |   |_ \| |   / _ \ / _ \| |/ / _ \ '__|
+ ___) |  __/ |_| |_| | |_) |   | |  ___) | |__| (_) | (_) |   <  __/ |   
+|____/ \___|\__|\__,_| .__/    |_| |____/ \____\___/ \___/|_|\_\___|_|   
+                     |_|                                                 
+
+
+1)  Download T3Cooker from the CVS repository to any directory MY_DIR:
+        cd $MY_DIR
+        cvs co -d T3Cooker UserCode/LLR/T3Cooker
+
+2) Add T3Cooker to the $PATH tp make it executable:
+        export PATH=$PATH:$T3COOKER_BASE_DIR
+
+3) To start using it just create a MY_T3COOKER.cfg file anywhere (better not in the T3Cooker folder).
+
+    Example:
+    cd ~
+    mkdir Production
+    cd Production
+    (copy example cfg from T3Cooker directory end edit...)
+    cp ../T3Cooker/t3cooker_llrTrees_example.cfg . 
+    About config file:
+    Section T3COOKER, USER and CMSSW are reserved, while the rest (datset sections) will become directories with jobs, results ...
+    In section USER we have:
+        ui_working_dir  	= 2012/CMG/TreesLLR/V5_10_0
+        user_remote_dir 	= /data_CMS/cms/common/2012/TreesLLR/21-Oct
+    ui_working_dir: will be created and one directory per dataset section will be created under it.
+    user_remote_dir: will be created and one directory per dataset(**) section will be created under it. This is directory where output root files will go.
+    (**) if no option user_remote_subdir id specified under dataset section the output filew will go to (user_remote_dir)/(dataset section name)
+
+    In dataset section, example [DoubleElectron_Run2012A-13Jul2012-v1]:
+    datasetpath = /store/cernproduction/hzz4l/CMG/DoubleElectron/Run2012A-13Jul2012-v1/AOD/V5/PAT_CMG_V5_10_0
+    is the path relative to input_files_se_prefix (under T3COOKER section) and is used to extract list o files for processing
+    user_remote_subdir = /DoubleElectron/Run2012A-13Jul2012-v1/AOD/V5/PAT_CMG_V5_10_0
+    as said, is the path relative to user_remote_dir where root files will be stored.
+    pycfg_params = isMC=0 dataset=2012Jul13ReReco
+    are the options which will be given to the CMSSW configuration (CMSSW.pset). In this case the pset must have options turned on - otherwise they don't get parsed. 
+
+    In CMSSW section:
+    The pset (full path to the CMSSW configuration to run) is specified.
+    The job spliting with is defined with input_files_per_job. Unfortunately no spiting by event is possible. 
+
+4) Now we have the configuration - let's run it:
+
+    4.0) 	configuring certificat to be able to run on LLR T3:
+	source source /opt/exp_soft/cms/t3/t3setup
+	- (your GRID certificate password is asked)
+
+    4.1) Creating jobs from configuration MY_T3COOKER.cfg:
+	t3cooker --cfg MY_T3COOKER.cfg --create
+	- this will create all jobs in directories under (ui_working_dir).
+	- take a look into some of them:
+	  - their structure is similar to CRAB, so, directories under (ui_working_dir)/(DATASET_NAME) are 'job','log','res','share','job/lists'
+
+    4.2) 	Submiting one dataset:
+	cd (ui_working_dir)
+	t3cooker -c DATASET_NAME --submit all
+	- Instead of "all" you can specify any range, like 1-10 or  1,2,3-6,10
+	
+    4.3) 	Asking for status of one dataset:
+	cd (ui_working_dir)
+	t3cooker -c DATASET_NAME --status
+	- This makes printout crab-like.
+
+    4.2) 	Killing one dataset:
+	cd (ui_working_dir)
+	t3cooker -c DATASET_NAME --kill all
+	- Instead of "all" you can specify any range, like 1-10 or  1,2,3-6,10
+	- To veryfy the killing do
+  	t3cooker -c DATASET_NAME --status
+
+5) Temporary solution for running T3Cooker on many datasets.
+    This is a simple set of 3 bash scripts that run t3cooker in loop for the moment.
+
+    5.1) 	Submiting/killing/status for  many dataset samples:
+	cd (ui_working_dir)
+	ls | grep -v samples > samples
+	- now file with sample directory names is created. To forbid running on a particular sample just comenent it with "#"
+	t3cooker_allSamples.sh --submit all
+	t3cooker_allSamples.sh --status 
+	t3cooker_allSamples.sh --kill all
+
+    5.2)  Force resubmit script:
+	- this simple script will do all necesary things for you to resubmit Aborted/Killed/Failed/Queued jobs from "samples"
+	- it is again, iterating over "samples" and does t3cooker status, kill and then resubmition.
+	- let's say we want to resubmit all Aborted jobs:
+	t3cooker_forceResubmit.sh Aborted
+	 - or Failed
+	t3cooker_forceResubmit.sh Failed
+
+
+	
+	
+
+
+
+
+
+    

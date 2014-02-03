@@ -1,0 +1,34 @@
+#!/bin/bash
+#for t3cooker area configuration
+
+echo " _   _____                 _             "
+echo "| |_|___ /  ___ ___   ___ | | _____ _ __ "
+echo "| __| |_ \ / __/ _ \ / _ \| |/ / _ \ '__|"
+echo "| |_ ___) | (_| (_) | (_) |   <  __/ |   "
+echo " \__|____/ \___\___/ \___/|_|\_\___|_|   "
+echo ""
+echo "Do this once to configure your t3cooker area"
+echo "with all the scripts and tools. You can make"
+echo "many different production areas inside, i.e"
+echo "areas to produce histograms, trees, whatever" 
+echo "you want on T3"
+
+t3dir="."
+#mkdir $t3dir
+
+#cp -r /home/roko/CMS/HZZ/CMSSW/t3cooker . 
+export T3COOKER_PRODUCTION_BASE_DIR=$(readlink -f "$t3dir")
+export PATH=$PATH:$T3COOKER_PRODUCTION_BASE_DIR/scripts
+
+echo "... adding one variable (path) to your .bashrc"
+
+echo "#Added for t3cooker">> ~/.bashrc
+echo "export T3COOKER_PRODUCTION_BASE_DIR="$T3COOKER_PRODUCTION_BASE_DIR >> ~/.bashrc
+echo "export PATH=$PATH:$T3COOKER_PRODUCTION_BASE_DIR/scripts" >> ~/.bashrc
+ls -altrh ~/.bashrc
+echo "For POLUI one should have a link to .bashrc to"
+echo "be executed every time you login."
+echo "Creating link to .bashrc "
+ln -s ~/.bashrc ~/.bash_profile
+ls -altrh ~/.bash_profile
+
